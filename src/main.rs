@@ -43,16 +43,12 @@ fn main() {
 
     let original_target = "5e69975d6a69cbd040de33cfc2e73ae839c269681da9d28acedfad3aeb3faf17d76ba60c68e168db06c479fc01e896cd5153f7b9d3af018f6e2faa531464680d";
     let target = "069f4c68a604551e25af06f1c8a365fc56a5617dd8021032487076fd6ee8fe88eec9a0a0c4aa1d719f3412d0bd010bd9f289950674fe7cad7f95bcbe58bedd4a";
-    // println!("target: {target}");
-    // println!("{}", hash_iteratively("hello"));
-
-    println!("{target}");
 
     let all_chars = r##"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[]^_`{|}~0123456789"##.chars().collect_vec();
 
     let answer = (1..=20)
         .into_iter()
-        .inspect(|i| println!("Testing length {}", i))
+        .inspect(|i| println!("Testing length {i}"))
         .flat_map(|len| {
             vec![&all_chars; len]
                 .into_iter()
