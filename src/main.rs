@@ -7,8 +7,6 @@ use sha2::{Digest, Sha256, Sha512};
 
 use rayon::prelude::*;
 
-use itertools::Itertools;
-
 fn hash_iteratively(input: &str) -> String {
     // hashes the input with md5 100 times, then with sha256 100 times, then with sha512 100 times
     let mut out = input.to_owned();
@@ -41,38 +39,27 @@ fn main() {
     assert_eq!(hash_iteratively(security), security_hash);
     println!("Security Hash Matches!");
 
-    let original_target = "5e69975d6a69cbd040de33cfc2e73ae839c269681da9d28acedfad3aeb3faf17d76ba60c68e168db06c479fc01e896cd5153f7b9d3af018f6e2faa531464680d";
     let target = "069f4c68a604551e25af06f1c8a365fc56a5617dd8021032487076fd6ee8fe88eec9a0a0c4aa1d719f3412d0bd010bd9f289950674fe7cad7f95bcbe58bedd4a";
 
-    let all_chars = r##"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 !\"#$%&'()*+,-./:;<=>?@[]^_`{|}~"##.chars().collect_vec();
+    // file names are all args
+    for filename in std::env::args().skip(1) {
+        println!("Checking {filename}");
+        match std::fs::read_to_string(&filename)
+            .unwrap()
+            .lines()
+            .par_bridge()
+            .find_any(|line| hash_iteratively(line) == target)
+        {
+            Some(answer) => {
+                println!("Cracked hash: {answer}");
+                fs::write("answer.txt", answer).expect("Unable to write file");
+                return;
+            }
+            None => {
+                println!("No match found in {filename}");
+            }
+        }
+    }
 
-    let answer = (1..=20)
-        .into_iter()
-        .inspect(|i| {
-            println!(
-                "Testing length {}, {} possibilities",
-                i,
-                all_chars.len().pow(*i as u32)
-            )
-        })
-        .flat_map(|len| {
-            vec![&all_chars; len]
-                .into_iter()
-                .multi_cartesian_product()
-                .map(|v| v.into_iter().collect::<String>())
-        })
-        .par_bridge()
-        .find_any(|s| hash_iteratively(s) == original_target)
-        .expect("No answer found");
-
-    // let answer = source
-    //     .into_iter()
-    //     .multi_cartesian_product()
-    //     .map(|v| v.into_iter().collect::<String>())
-    //     .par_bridge()
-    //     .find_any(|s| hash_iteratively(s) == target)
-    //     .expect("Didn't find it");
-
-    println!("Cracked hash: {answer}");
-    fs::write("answer.txt", answer).expect("Unable to write file");
+    println!("No match found in any file");
 }
