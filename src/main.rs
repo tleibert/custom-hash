@@ -54,15 +54,17 @@ fn main() {
                 );
             }
         })
-        .map(Result::unwrap)
         .par_bridge()
-        .find_any(|line| hash_iteratively(&line) == target);
+        .find_any(|line| match line {
+            Ok(line) => hash_iteratively(line) == target,
+            Err(_) => false,
+        });
 
     match answer {
-        Some(answer) => {
+        Some(Ok(answer)) => {
             println!("Found answer: {}", answer);
             fs::write("answer.txt", answer).expect("Unable to write file");
         }
-        None => println!("No answer found"),
+        _ => println!("No answer found"),
     }
 }
