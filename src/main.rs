@@ -1,6 +1,7 @@
 use std::{
     fs::{self, File},
     io::{BufRead, BufReader},
+    path::Path,
 };
 
 use std::time;
@@ -32,32 +33,53 @@ fn hash_iteratively(input: &str) -> String {
 
 fn main() {
     let target = "069f4c68a604551e25af06f1c8a365fc56a5617dd8021032487076fd6ee8fe88eec9a0a0c4aa1d719f3412d0bd010bd9f289950674fe7cad7f95bcbe58bedd4a";
-    let filename = std::env::args().nth(1).unwrap_or_else(|| {
+    let dirname = std::env::args().nth(1).unwrap_or_else(|| {
         eprintln!("Usage: {} <filename>", std::env::args().nth(0).unwrap());
         std::process::exit(1);
     });
 
-    let file = File::open(filename).expect("Could not open file");
-    let start_time = time::Instant::now();
-    // loop and read from standard input, checking the hash
-    let file_contents = BufReader::new(file);
-    let answer = file_contents
-        .lines()
-        .take(1000000)
-        .par_bridge()
-        .find_any(|line| match line {
-            Ok(line) => hash_iteratively(line) == target,
-            Err(_) => false,
-        });
+    let dir = Path::new(&dirname);
+    let file_names: Vec<String> = fs::read_dir(dir)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.is_file())
+        .map(|path| path.to_str().unwrap().to_owned())
+        .collect();
 
-    println!("Processed {} lines in {:?}", 1000000, start_time.elapsed());
-    println!(
-        "Hash rate {} hashes/second",
-        1000000 as f64 / start_time.elapsed().as_secs_f64()
-    );
+    let answer = file_names.into_par_iter().find_any(|filename| {
+        // start time
+        let start = time::Instant::now();
+        let mut counter = 0;
+
+        // read file
+        let ret = BufReader::new(File::open(dir.join(filename)).unwrap())
+            .lines()
+            .inspect(|_| {
+                counter += 1;
+                if counter % 100000 == 0 {
+                    // print hash rate
+                    println!(
+                        "Hash rate: {} hashes/s",
+                        counter as f64 / start.elapsed().as_secs_f64()
+                    );
+                }
+            })
+            .find(|line| match line {
+                Ok(line) => hash_iteratively(line) == target,
+                Err(_) => false,
+            })
+            .is_some();
+
+        eprintln!(
+            "Processed file {} in {} ms",
+            filename,
+            start.elapsed().as_millis()
+        );
+        ret
+    });
 
     match answer {
-        Some(Ok(answer)) => {
+        Some(answer) => {
             println!("Found answer: {}", answer);
             fs::write("answer.txt", answer).expect("Unable to write file");
         }
