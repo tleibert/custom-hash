@@ -55,17 +55,7 @@ fn main() {
         // read file
         let ret = BufReader::new(File::open(dir.join(&filename)).unwrap())
             .lines()
-            .find_map(|line| match line {
-                Ok(line) => {
-                    if hash_iteratively(&line) == target {
-                        println!("Found {} in {}", &line, filename);
-                        Some(line)
-                    } else {
-                        None
-                    }
-                }
-                Err(_) => None,
-            });
+            .find_map(|line| line.ok().filter(|line| hash_iteratively(line) == target));
 
         eprintln!(
             "Processed file {} in {} ms",
