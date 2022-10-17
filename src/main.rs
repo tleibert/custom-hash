@@ -46,6 +46,8 @@ fn main() {
         .map(|path| path.to_str().unwrap().to_owned())
         .collect();
 
+    println!("Loaded {} filenames", file_names.len());
+
     let answer = file_names.into_par_iter().find_any(|filename| {
         // start time
         let start = time::Instant::now();
