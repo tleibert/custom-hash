@@ -3,6 +3,8 @@ use std::{
     io::{BufRead, BufReader},
 };
 
+use std::time;
+
 use rustc_serialize::hex::ToHex;
 
 use md5::Md5;
@@ -36,11 +38,22 @@ fn main() {
     });
 
     let file = File::open(filename).expect("Could not open file");
-
+    let start_time = time::Instant::now();
+    let mut counter: u64 = 0;
     // loop and read from standard input, checking the hash
     let file_contents = BufReader::new(file);
     let answer = file_contents
         .lines()
+        .inspect(|_| {
+            counter += 1;
+            if counter % 100000 == 0 {
+                eprintln!(
+                    "{} lines processed, {} hashes/s",
+                    counter,
+                    counter as f64 / start_time.elapsed().as_secs_f64()
+                );
+            }
+        })
         .map(Result::unwrap)
         .par_bridge()
         .find_any(|line| hash_iteratively(&line) == target);
