@@ -39,26 +39,22 @@ fn main() {
 
     let file = File::open(filename).expect("Could not open file");
     let start_time = time::Instant::now();
-    let mut counter: u64 = 0;
     // loop and read from standard input, checking the hash
     let file_contents = BufReader::new(file);
     let answer = file_contents
         .lines()
-        .inspect(|_| {
-            counter += 1;
-            if counter % 100000 == 0 {
-                eprintln!(
-                    "{} lines processed, {} hashes/s",
-                    counter,
-                    counter as f64 / start_time.elapsed().as_secs_f64()
-                );
-            }
-        })
+        .take(1000000)
         .par_bridge()
         .find_any(|line| match line {
             Ok(line) => hash_iteratively(line) == target,
             Err(_) => false,
         });
+
+    println!("Processed {} lines in {:?}", 1000000, start_time.elapsed());
+    println!(
+        "Hash rate {} hashes/second",
+        1000000 as f64 / start_time.elapsed().as_secs_f64()
+    );
 
     match answer {
         Some(Ok(answer)) => {
