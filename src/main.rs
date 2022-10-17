@@ -1,4 +1,7 @@
-use std::fs;
+use std::{
+    fs::{self, File},
+    io::{BufRead, BufReader},
+};
 
 use rustc_serialize::hex::ToHex;
 
@@ -26,40 +29,27 @@ fn hash_iteratively(input: &str) -> String {
 }
 
 fn main() {
-    let ncsu = "ncstate";
-    let ncsu_hash = "2d4547b1e59358fbb8846022b58e6c915fa644ee1735788b6cdaf0f8ba4bc3b8ea778d092e786047b018086a0f14db7ba684eefb150a90492d7f9caf6b6bc114";
-    let csc = "csc474";
-    let csc_hash = "d07bbb7bf6ca344bd6632b90d38b07a77cdc03f0d18f9a8411b069bd716be5a13bba41cd205432b1bdcca9542c865ccc05e8c4f529f064de1f71c7ee5731beeb";
-    let security = "security";
-    let security_hash = "88466c23009271eb909e586c6707120f30a2dd6ae53fb025badb2f9d0f6765b90f124e3524d2d63719e8e668cf164411a61b1fea077ec1dd3b1db8889622095c";
-    assert_eq!(hash_iteratively(ncsu), ncsu_hash);
-    println!("NCSU Hash Matches!");
-    assert_eq!(hash_iteratively(csc), csc_hash);
-    println!("CSC Hash Matches!");
-    assert_eq!(hash_iteratively(security), security_hash);
-    println!("Security Hash Matches!");
-
     let target = "069f4c68a604551e25af06f1c8a365fc56a5617dd8021032487076fd6ee8fe88eec9a0a0c4aa1d719f3412d0bd010bd9f289950674fe7cad7f95bcbe58bedd4a";
+    let filename = std::env::args().nth(1).unwrap_or_else(|| {
+        eprintln!("Usage: {} <filename>", std::env::args().nth(0).unwrap());
+        std::process::exit(1);
+    });
 
-    // file names are all args
-    for filename in std::env::args().skip(1) {
-        println!("Checking {filename}");
-        match std::fs::read_to_string(&filename)
-            .unwrap()
-            .lines()
-            .par_bridge()
-            .find_any(|line| hash_iteratively(line) == target)
-        {
-            Some(answer) => {
-                println!("Cracked hash: {answer}");
-                fs::write("answer.txt", answer).expect("Unable to write file");
-                return;
-            }
-            None => {
-                println!("No match found in {filename}");
-            }
+    let file = File::open(filename).expect("Could not open file");
+
+    // loop and read from standard input, checking the hash
+    let file_contents = BufReader::new(file);
+    let answer = file_contents
+        .lines()
+        .map(Result::unwrap)
+        .par_bridge()
+        .find_any(|line| hash_iteratively(&line) == target);
+
+    match answer {
+        Some(answer) => {
+            println!("Found answer: {}", answer);
+            fs::write("answer.txt", answer).expect("Unable to write file");
         }
+        None => println!("No answer found"),
     }
-
-    println!("No match found in any file");
 }
