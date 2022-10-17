@@ -49,21 +49,10 @@ fn main() {
     let answer = file_names.into_par_iter().find_any(|filename| {
         // start time
         let start = time::Instant::now();
-        let mut counter = 0;
 
         // read file
         let ret = BufReader::new(File::open(dir.join(filename)).unwrap())
             .lines()
-            .inspect(|_| {
-                counter += 1;
-                if counter % 100000 == 0 {
-                    // print hash rate
-                    println!(
-                        "Hash rate: {} hashes/s",
-                        counter as f64 / start.elapsed().as_secs_f64()
-                    );
-                }
-            })
             .find(|line| match line {
                 Ok(line) => hash_iteratively(line) == target,
                 Err(_) => false,
