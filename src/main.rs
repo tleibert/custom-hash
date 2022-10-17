@@ -48,24 +48,31 @@ fn main() {
 
     println!("Loaded {} filenames", file_names.len());
 
-    let answer = file_names.into_par_iter().find_any(|filename| {
+    let answer = file_names.into_par_iter().find_map_any(|filename| {
         // start time
         let start = time::Instant::now();
 
         // read file
-        let ret = BufReader::new(File::open(dir.join(filename)).unwrap())
+        let ret = BufReader::new(File::open(dir.join(&filename)).unwrap())
             .lines()
-            .find(|line| match line {
-                Ok(line) => hash_iteratively(line) == target,
-                Err(_) => false,
-            })
-            .is_some();
+            .find_map(|line| match line {
+                Ok(line) => {
+                    if hash_iteratively(&line) == target {
+                        println!("Found {} in {}", &line, filename);
+                        Some(line)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None,
+            });
 
         eprintln!(
             "Processed file {} in {} ms",
             filename,
             start.elapsed().as_millis()
         );
+
         ret
     });
 
